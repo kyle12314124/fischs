@@ -1,0 +1,10 @@
+# editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+
+# executor logs and local captures
+*.log
+*.txt
+captures/
+tools/
