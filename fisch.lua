@@ -13,16 +13,28 @@ local VirtualInput     = game:GetService("VirtualInputManager")
 local StarterGui       = game:GetService("StarterGui")
 local Workspace        = game:GetService("Workspace")
 
-local PLACE_ID = 16732694052
-local VERSION  = "v1.0"
+local PLACE_ID   = 16732694052
+local UNIVERSE_ID = 5750914919   -- Fisch; one universe, several serving place ids
+local PLACE_IDS  = { 16732694052, 131716211654599 }
+local VERSION    = "v1.1"
 
-if game.PlaceId ~= PLACE_ID then
-    warn(("[fisch] wrong place: %d (expected %d) — join the game first, then execute")
-        :format(game.PlaceId, PLACE_ID))
+-- Roblox hands out different place ids for the same universe (PC, mobile,
+-- subplace). Gate on universe first, then the known places, then the name.
+local function sameGame()
+    if game.GameId == UNIVERSE_ID then return true end
+    for _, id in ipairs(PLACE_IDS) do
+        if game.PlaceId == id then return true end
+    end
+    return string.find(string.lower(game.Name), "fisch", 1, true) ~= nil
+end
+
+if not sameGame() then
+    warn(("[fisch] wrong game: place %d, universe %d — join Fisch, then execute")
+        :format(game.PlaceId, game.GameId))
     pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "fisch",
-            Text = ("wrong place (%d) — join Fisch, then execute"):format(game.PlaceId),
+            Text = ("wrong game (place %d) — join Fisch, then execute"):format(game.PlaceId),
             Duration = 6,
         })
     end)
@@ -801,6 +813,7 @@ local function resolveGuiParent()
 end
 
 log("milestone: building gui")
+log(("place %d universe %d"):format(game.PlaceId, game.GameId))
 local parentGui, parentName = resolveGuiParent()
 log("milestone: gui parent = " .. tostring(parentName))
 
