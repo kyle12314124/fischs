@@ -88,6 +88,13 @@ Cast first, then press `F7`; the bobber only exists mid-cast.
 
 ## Troubleshooting
 
+- **Executed and nothing happened at all** — run `diag.lua`. It prints the place
+  id, executor name, transport, fetch, compile and a live GUI mount test, so the
+  first failing line names the cause. Most common result: `fetch FAILED`, which
+  means the executor blocks `HttpGet`; use `request` in `loader.lua` or paste
+  `fisch.lua` directly.
+- **No panel but console shows `[fisch] v1.0 loaded`** — the executor strips
+  ScreenGui. Re-run from `gethui` or switch executor.
 - **Panel loads, nothing happens** — no mouse injection. Check executor input
   setting; the status line will read `stage casting` with `casts 0`.
 - **Casts then immediately gives up** — `no bobber`. Run `probe.lua` → `F7` and
@@ -106,4 +113,5 @@ Cast first, then press `F7`; the bobber only exists mid-cast.
 fisch.lua    one file: config, input, cast engine, sell, movement, ESP, GUI
 loader.lua   mirror loader + cache bust
 probe.lua    read-only in-game dumper
+diag.lua     capability doctor, run when nothing shows
 ```

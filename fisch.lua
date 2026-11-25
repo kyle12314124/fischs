@@ -17,7 +17,15 @@ local PLACE_ID = 16732694052
 local VERSION  = "v1.0"
 
 if game.PlaceId ~= PLACE_ID then
-    warn(("[fisch] wrong place: %d"):format(game.PlaceId))
+    warn(("[fisch] wrong place: %d (expected %d) — join the game first, then execute")
+        :format(game.PlaceId, PLACE_ID))
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "fisch",
+            Text = ("wrong place (%d) — join Fisch, then execute"):format(game.PlaceId),
+            Duration = 6,
+        })
+    end)
     return
 end
 
@@ -774,9 +782,27 @@ end
 -- gui
 -- ======================================================================
 
-local parentGui = (getgenv and getgenv().gethui and getgenv().gethui())
-    or (gethui and gethui())
-    or playerGui()
+-- gethui keeps the panel out of PlayerGui's reset pass; PlayerGui and CoreGui are
+-- the fallbacks for executors that expose neither. A nil parent is a silent
+-- no-show, so every rung is probed and the last one cannot be nil.
+local function resolveGuiParent()
+    local env = getgenv and getgenv()
+    if env and type(env.gethui) == "function" then
+        local ok, result = pcall(env.gethui)
+        if ok and result then return result, "gethui" end
+    end
+    if type(gethui) == "function" then
+        local ok, result = pcall(gethui)
+        if ok and result then return result, "gethui" end
+    end
+    local guiParent = playerGui()
+    if guiParent then return guiParent, "PlayerGui" end
+    return game:GetService("CoreGui"), "CoreGui"
+end
+
+log("milestone: building gui")
+local parentGui, parentName = resolveGuiParent()
+log("milestone: gui parent = " .. tostring(parentName))
 
 local previous = parentGui and parentGui:FindFirstChild("FischSuite")
 if previous then previous:Destroy() end
@@ -789,6 +815,7 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.DisplayOrder = 999
 gui.Parent = parentGui
 state.gui = gui
+log("milestone: panel mounted")
 
 local main = Instance.new("Frame")
 main.Name = "Main"
@@ -1134,5 +1161,6 @@ track(localPlayer.CharacterAdded:Connect(function()
 end))
 
 applyMovement()
+log("milestone: loops bound")
 log(("%s loaded — RightShift menu, F fish, F2 hide, End unload"):format(VERSION))
 notify("fisch " .. VERSION .. " loaded")
