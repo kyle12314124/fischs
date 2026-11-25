@@ -1,16 +1,22 @@
--- Loader v2 for kyle12314124/fischs :: fisch.lua
+-- Loader v3 for kyle12314124/fischs :: fisch.lua
 -- Paste into the executor, execute, done.
--- Failures are reported on screen as well as in the console: a silent loader
--- is indistinguishable from a dead one.
+-- Mirror order matters: jsDelivr is not subject to raw.githubusercontent's
+-- minutes-long cache, and the sha pin is immutable, so a stale CDN copy can
+-- never win. A copy without the universe gate is treated as stale, not run.
 
 local OWNER, REPO, FILE = "kyle12314124", "fischs", "fisch.lua"
-local LOADER_VERSION = "loader2"
+local LOADER_VERSION = "loader3"
+local PIN_SHA = "977e5e674be3add6a1cbce2498824ca79efbb663"
 local CACHE_BUST = "?v=" .. tostring(os.time())
 
+-- every release must contain this marker; a body without it is an old file
+local MARKER = "UNIVERSE_ID"
+
 local MIRRORS = {
-    "https://raw.githubusercontent.com/%s/%s/main/%s%s",
-    "https://raw.githubusercontent.com/%s/%s/master/%s%s",
-    "https://cdn.jsdelivr.net/gh/%s/%s@main/%s%s",
+    "https://cdn.jsdelivr.net/gh/%s/%s@main/%s" .. CACHE_BUST,
+    "https://cdn.jsdelivr.net/gh/%s/%s@" .. PIN_SHA .. "/%s",
+    "https://raw.githubusercontent.com/%s/%s/main/%s" .. CACHE_BUST,
+    "https://raw.githubusercontent.com/%s/%s/master/%s",
 }
 
 local function notify(text, duration)
@@ -23,15 +29,16 @@ local function notify(text, duration)
     end)
 end
 
-local function clean(body)
-    return type(body) == "string" and #body > 0
-        and not string.find(body, "404: Not Found", 1, true)
+local function usable(body)
+    if type(body) ~= "string" or #body < 256 then return false end
+    if string.find(body, "404: Not Found", 1, true) then return false end
+    return string.find(body, MARKER, 1, true) ~= nil
 end
 
 -- game.HttpGet first: it exists in nearly every executor and follows redirects.
 local function httpGet(url)
     local ok, body = pcall(function() return game:HttpGet(url, true) end)
-    if ok and clean(body) then return body end
+    if ok and usable(body) then return body end
 
     local requester
     if type(syn) == "table" and type(syn.request) == "function" then
@@ -50,8 +57,8 @@ local function httpGet(url)
         local ok2, response = pcall(requester, { Url = url, Method = "GET" })
         if ok2 and type(response) == "table" then
             local body = response.Body or response.body
-            if clean(body) then return body, nil end
-            return nil, tostring(response.StatusCode or response.Status or "no body")
+            if usable(body) then return body, nil end
+            return nil, "stale or empty body (" .. tostring(#tostring(body)) .. " bytes)"
         end
     end
 
@@ -63,7 +70,7 @@ print("[fisch:" .. LOADER_VERSION .. "] fetching " .. FILE)
 local source, lastError
 
 for _, template in ipairs(MIRRORS) do
-    local url = string.format(template, OWNER, REPO, FILE, CACHE_BUST)
+    local url = string.format(template, OWNER, REPO, FILE)
     local body, err = httpGet(url)
     if body then
         source = body
